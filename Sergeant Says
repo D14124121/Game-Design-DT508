@@ -1,0 +1,330 @@
+import ddf.minim.*;
+Minim minim;
+AudioPlayer s1, s2, s3, s4;
+
+int [] gameArray; //didn't understand this
+int [] userArray; //didn't understand this
+
+int i, j;
+int score;
+int highscore;
+int arrayItem; //didn't understand this
+int startMillis; // GAME COUNTER
+int diam; //diameter for squares
+int gameState;
+color sRed, sBlue, sYellow, sGreen, textColor; //colours
+String responseText; //don't understand
+PImage bg; //background
+PImage splash;
+PImage failed;
+//PImage bg2;
+PFont font; //custom font
+
+void setup() {
+
+  size(400, 400);
+  bg = loadImage("sergeant.jpg");
+  //bg2 = loadImage("loading.jpg");
+  diam = 80;
+  gameState = 0;
+  textColor = color(231, 217, 172);
+  gameArray = new int[1];
+  userArray = new int[0];
+  initialize(gameArray, 1, 5);
+
+  minim = new Minim(this);
+  s1 = minim.loadFile("shotgun.mp3");
+  s2 = minim.loadFile("GUN_FIRE.mp3");
+  s3 = minim.loadFile("barreta_m9.mp3");
+  s4 = minim.loadFile("M4A1.mp3");
+
+  font = loadFont("OctinStencilFree-48.vlw");
+  textFont(font, 20);
+
+  splash = loadImage("splash.jpg");
+  failed = loadImage("FAILED.jpg");
+}
+
+// INITIALIZE NUMBERS // had to get help for this!
+
+void initialize(int [] initial, int  min, int max) {
+
+  for (int i = 0; i < initial.length; i++) {
+    initial[i] = int(random( min, max));
+  }
+}
+
+void draw() {
+
+  background(bg);
+  drawRects();
+  writeScore(); //normal score
+  highScore(); //highest score
+
+  {
+    if (millis() < 3000)//in milliseconds to display a splash, didn't know how to do a proper splash
+    {
+      image(splash, 0, 0);
+    }
+  }
+
+  // START SCREEN
+
+  if (gameState == 0) {
+    i = 0;
+    j = 0;
+    startMillis = 0;
+    userArray = new int[0];
+    fill(textColor);
+    textAlign(CENTER, CENTER);
+    //background(bg2);
+    text("Press ENTER to Start", width/2, 380);
+  }
+
+  // BOARD PLAY THROUGH
+
+  if (gameState == 1) {
+    //background(bg);
+    j = 0;
+    fill(textColor);
+    textAlign(CENTER, CENTER);
+    text("Watch what I do!", width/2, height/2);
+    playBoard();
+  };
+
+  // USER INPUT
+
+  if (gameState == 2) {
+    fill(textColor);
+    responseText = "Now copy me!";
+    textAlign(CENTER, CENTER);
+    text(responseText, width/2, height/2);
+  }
+
+  // BUFFER TIME
+
+  if (gameState == 3) {
+    startMillis++;
+    if (startMillis >= 100) {
+      sRed = color(0);
+      sGreen = color(0);
+      sYellow = color(0);
+      sBlue = color(0);
+    }
+    fill(textColor);
+    responseText = "Well done soldier";
+    textAlign(CENTER, CENTER);
+    text(responseText, width/2, height/2);
+    if (startMillis >= 150) {
+      minim = new Minim(this);
+      s1 = minim.loadFile("shotgun.mp3");
+      s2 = minim.loadFile("GUN_FIRE.mp3");
+      s3 = minim.loadFile("barreta_m9.mp3");
+      s4 = minim.loadFile("M4A1.mp3");
+      startMillis = 0;
+      gameState = 1;
+    }
+  }
+
+  // GAME END
+
+  if (gameState == 4) {
+    fill(textColor);
+    textAlign(CENTER, CENTER);
+    text("You failed soldier", width/2, height/2 - (height*.0325));
+    //image(failed,0,0); //CAN'T GET THIS TO WORK
+    text("Press ENTER to Retry", width/2, 380);
+  };
+}
+
+// WRITES SCORE
+
+void writeScore() {
+
+  score = gameArray.length - 1;
+  fill(textColor);
+  text("Score: " + score, 50, 20);
+  //text("Score: " + score, width/2, height/14);
+  //text("Score: " + score, width/2, height - height/14);
+}
+
+// HIGH SCORE
+
+void highScore() {
+
+  if (score > highscore) {
+    highscore = score;
+  }
+
+  fill(textColor);
+  text("High Score: " + highscore, 335, 20);
+  //text("Score: " + score, width/2, height/14);
+  //text("Score: " + score, width/2, height - height/14);
+}
+
+// PLAY THROUGH gameArray!
+
+void playBoard() {
+
+  if (i < gameArray.length) {
+    if (gameArray[i] == 1) {
+      s1.play( );
+      sRed = color(225, 0, 0);
+      sGreen = color(0);
+      sYellow = color(0);
+      sBlue = color(0);
+    } else if (gameArray[i] == 2) {
+      s2.play( );
+      sRed = color(0);
+      sGreen = color(0, 225, 0);
+      sYellow = color(0);
+      sBlue = color(0);
+    } else if (gameArray[i] == 3) {
+      s3.play( );
+      sRed = color(0);
+      sGreen = color(0);
+      sYellow = color(250, 225, 0);
+      sBlue = color(0);
+    } else if (gameArray[i] == 4) {
+      s4.play( );
+      sRed = color(0);
+      sGreen = color(0);
+      sYellow = color(0);
+      sBlue = color(0, 0, 225);
+    } else {
+      sRed = color(0);
+      sGreen = color(0);
+      sYellow = color(0);
+      sBlue = color(0);
+    }
+    startMillis++;
+    if (startMillis >= 50) {
+      i += 1;
+      startMillis = 0;
+      minim = new Minim(this);
+      s1 = minim.loadFile("shotgun.mp3");
+      s2 = minim.loadFile("GUN_FIRE.mp3");
+      s3 = minim.loadFile("barreta_m9.mp3");
+      s4 = minim.loadFile("M4A1.mp3");
+    }
+  } else if (i >= gameArray.length) {
+    sRed = color(0);
+    sGreen = color(0);
+    sYellow = color(0);
+    sBlue = color (0);
+    gameState = 2;
+  };
+}
+
+// COMPARE gameArray and userArray!
+
+void compare() {
+
+  arrayItem = j - 1;
+  if (userArray[arrayItem] != gameArray[arrayItem]) {
+    gameState = 4;
+  }
+  if (gameState != 4 && j == gameArray.length) {
+    gameArray = append(gameArray, int(random(1, 5)));
+    userArray = new int[0];
+    i = 0;
+    j = 0;
+    gameState = 3;
+  }
+}
+
+// KEYPRESS COMMANDS
+
+void keyPressed() {
+
+  if (gameState == 0) {
+    if (key == ENTER) {
+      gameState = 1;
+    }
+  }
+  if (gameState == 4) {
+    if (key == ENTER) {
+      i = 0;
+      j = 0;
+      startMillis = 0;
+      userArray = new int[0];
+      gameArray = new int[1];
+      initialize(gameArray, 1, 5);
+      gameState = 1;
+    }
+  }
+  if (gameState == 2) {
+    minim = new Minim(this);
+    s1 = minim.loadFile("shotgun.mp3");
+    s2 = minim.loadFile("GUN_FIRE.mp3");
+    s3 = minim.loadFile("barreta_m9.mp3");
+    s4 = minim.loadFile("M4A1.mp3");
+    if (key == '1') {
+      s1.play();
+      sRed = color(225, 0, 0);
+      sGreen = color(0);
+      sYellow = color(0);
+      sBlue = color(0);
+      userArray = append(userArray, 1);
+      j++;
+      if (j >= 1) {
+        compare();
+      }
+    } else if (key == '2') {
+      s2.play();
+      sRed = color(0);
+      sGreen = color(0, 225, 0);
+      sYellow = color(0);
+      sBlue = color(0);
+      userArray = append(userArray, 2);
+      j++;
+      if (j >= 1) {
+        compare();
+      }
+    } else if (key == '3') {
+      s3.play();
+      sRed = color(0);
+      sGreen = color(0);
+      sYellow = color(250, 225, 0);
+      sBlue = color(0);
+      userArray = append(userArray, 3);
+      j++;
+      if (j >= 1) {
+        compare();
+      }
+    } else if (key == '4') {
+      s4.play();
+      sRed = color(0);
+      sGreen = color(0);
+      sYellow = color(0);
+      sBlue = color(0, 0, 225);
+      userArray = append(userArray, 4);
+      j++;
+      if (j >= 1) {
+        compare();
+      }
+    };
+  };
+}
+
+// DRAW RECTANGLES
+
+void drawRects() {
+
+  rectMode(CENTER);
+  fill(sRed);
+  rect(width/4, height/4, diam, diam);
+  fill(sGreen);
+  rect(width - width/4, height/4, diam, diam);
+  fill(sYellow);
+  rect(width/4, height - height/4, diam, diam);
+  fill(sBlue);
+  rect(width - width/4, height - height/4, diam, diam);
+  textAlign(CENTER, CENTER);
+  fill(textColor);
+  text("1", width/4, height/4);
+  text("2", width - width/4, height/4);
+  text("3", width/4, height - height/4);
+  text("4", width - width/4, height - height/4);
+}
+
