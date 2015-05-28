@@ -1,0 +1,174 @@
+class World {
+  int runesInStage; // HOW MANY RUNES PRESENT WHEN YOU START THE LEVEL
+  int runeRotateTimer; // SPINNING CYCLES FOR RUNES
+
+  static final int TILE_EMPTY = 0;
+  static final int TILE_SOLID = 1;
+  static final int TILE_RUNE = 2;
+  static final int TILE_KILLBLOCK = 3;
+  static final int TILE_START = 4; // THIS IS YOUR STARTING POSITION - LOOK AT GRID BELOW TO FIND IT OR CHANGE IT
+
+  static final int GRID_UNIT_SIZE = 60; // SIZE OF EACH WOLRD UNIT SQUARE
+
+  // THESE DETERMINE THE SIZE OF THE GRID BELOW LIKE COLUMNS AND ROWS
+  static final int GRID_UNITS_WIDE = 28;
+  static final int GRID_UNITS_TALL = 8;
+
+  int[][] worldGrid = new int[GRID_UNITS_TALL][GRID_UNITS_WIDE]; // GAME CHECKS THIS
+
+  // CHANGING THESE NUMBERS CHANGES THE LAYOUT OF THE LEVEL IF I WANT MULTIPLE LEVELS - I WOULD LIKE TO LEARN HOW TO MAKE THESE RANDOM EACH GAME RESET
+  int[][] start_Grid = { 
+    {
+      2, 0, 2, 0, 0, 0, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 2, 0, 3, 0
+    }
+    , 
+    {
+      0, 2, 0, 0, 0, 0, 2, 2, 1, 4, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 2, 2, 0, 2, 0, 2, 0
+    }
+    , 
+    {
+      2, 0, 2, 0, 4 /*(YOUR STARTING POSITION)*/, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0
+    }
+    , 
+    {
+      0, 0, 0, 2, 1, 2, 0, 0, 2, 2, 2, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 1, 0
+    }
+    , 
+    {
+      1, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 1, 2, 0, 1, 3
+    }
+    , 
+    {
+      1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 3, 1, 0, 0, 0, 0, 0, 1, 3
+    }
+    , 
+    {
+      3, 2, 0, 0, 1, 3, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 3
+    }
+    , 
+    {
+      3, 2, 0, 1, 1, 3, 1, 3, 3, 3, 1, 3, 2, 1, 3, 1, 3, 2, 0, 0, 0, 0, 1, 2, 1, 2, 1, 3
+    }
+  };
+
+  World() {
+    runeRotateTimer = 0;
+  }
+
+  int worldSquareAt(PVector thisPosition) {
+    float gridSpotX = thisPosition.x/GRID_UNIT_SIZE;
+    float gridSpotY = thisPosition.y/GRID_UNIT_SIZE;
+
+    // BOUNDARY CHECK!
+    if (gridSpotX<0) {
+      return TILE_SOLID;
+    }
+    if (gridSpotX>=GRID_UNITS_WIDE) {
+      return TILE_SOLID;
+    }
+    if (gridSpotY<0) {
+      return TILE_SOLID;
+    }
+    if (gridSpotY>=GRID_UNITS_TALL) {
+      return TILE_SOLID;
+    }
+
+    return worldGrid[int(gridSpotY)][int(gridSpotX)];
+  }
+
+  // CHANGES TILE_RUNE TO TILE_EMPTY ONCE RUNE IS COLLECTED
+  void setSquareAtToThis(PVector thisPosition, int newTile) {
+    int gridSpotX = int(thisPosition.x/GRID_UNIT_SIZE);
+    int gridSpotY = int(thisPosition.y/GRID_UNIT_SIZE);
+
+    if (gridSpotX<0 || gridSpotX>=GRID_UNITS_WIDE || 
+      gridSpotY<0 || gridSpotY>=GRID_UNITS_TALL) {
+      return;
+    }
+
+    worldGrid[gridSpotY][gridSpotX] = newTile;
+  }
+
+  // CORRECT WHEN PLAYER MOVING TO NEW TILE
+  float topOfSquare(PVector thisPosition) {
+    int thisY = int(thisPosition.y);
+    thisY /= GRID_UNIT_SIZE;
+    return float(thisY*GRID_UNIT_SIZE);
+  }
+  float bottomOfSquare(PVector thisPosition) {
+    if (thisPosition.y<0) {
+      return 0;
+    }
+    return topOfSquare(thisPosition)+GRID_UNIT_SIZE;
+  }
+  float leftOfSquare(PVector thisPosition) {
+    int thisX = int(thisPosition.x);
+    thisX /= GRID_UNIT_SIZE;
+    return float(thisX*GRID_UNIT_SIZE);
+  }
+  float rightOfSquare(PVector thisPosition) {
+    if (thisPosition.x<0) {
+      return 0;
+    }
+    return leftOfSquare(thisPosition)+GRID_UNIT_SIZE;
+  }
+
+  void reload() {
+    runesInStage = 0; // COUNT RUNES WHEN LEVEL LOADS
+
+    for (int i=0; i<GRID_UNITS_WIDE; i++) {
+      for (int ii=0; ii<GRID_UNITS_TALL; ii++) {
+        if (start_Grid[ii][i] == TILE_START) { // STARTING POSITION
+          worldGrid[ii][i] = TILE_EMPTY; // EMPTY TILE THERE
+
+          // PLAYER WILL BE PUT AT CENTRE OF THAT TILE
+          thePlayer.position.x = i*GRID_UNIT_SIZE+(GRID_UNIT_SIZE/2);
+          thePlayer.position.y = ii*GRID_UNIT_SIZE+(GRID_UNIT_SIZE/2);
+        } else {
+          if (start_Grid[ii][i]==TILE_RUNE) {
+            runesInStage++;
+          }
+          worldGrid[ii][i] = start_Grid[ii][i];
+        }
+      }
+    }
+  }
+
+  void render() { // MAKE THE WORLD/GRID
+
+    // ROTATING RUNES
+    runeRotateTimer--;
+    if (runeRotateTimer<-GRID_UNIT_SIZE/3) {
+      runeRotateTimer = GRID_UNIT_SIZE/3;
+    }
+
+    for (int i=0; i<GRID_UNITS_WIDE; i++) { // EACH COLUMN
+      for (int ii=0; ii<GRID_UNITS_TALL; ii++) { // EACH TILE IN COLUMN
+        switch(worldGrid[ii][i]) { // WHAT TILE TYPE IS IT?
+        case TILE_SOLID:
+          stroke(230, 232, 227);
+          fill(230, 232, 227);
+          break;
+        case TILE_KILLBLOCK: // DON'T LAND ON THESE
+          stroke(162, 0, 0);
+          fill(color(random (60, 180), 0, 0));
+          break;  
+        default:
+          stroke(51, 51, 68);
+          fill(51, 51, 68);
+          break;
+        }
+        // DRAW TILES
+        rect(i*GRID_UNIT_SIZE, ii*GRID_UNIT_SIZE, 
+        GRID_UNIT_SIZE-1, GRID_UNIT_SIZE-1); 
+
+        if (worldGrid[ii][i]==TILE_RUNE) { // DRAW RUNE TILES
+          noStroke();
+          fill(224, 251, 172); // RUNE COLOUR
+          ellipse(i*GRID_UNIT_SIZE+(GRID_UNIT_SIZE/2), ii*GRID_UNIT_SIZE+(GRID_UNIT_SIZE/2), // PLACE IT IN CENTRE OF TILE
+          abs(runeRotateTimer), GRID_UNIT_SIZE/2); // SPIN SIZE WIDTH
+        }
+      }
+    }
+  }
+}
