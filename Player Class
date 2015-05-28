@@ -1,0 +1,213 @@
+class Player {
+  PVector position, velocity;
+
+  Boolean isOnGround; // ARE YOU ON THE GROUND?
+  Boolean facingRight; // I USED THIS TO FLIP IMAGE DEPENDING ON WHICH WAY YOU ARE FACING
+  int animDelay; // TIMER FOR ANIMATIONS
+  int animFrame; // WHICH ANIMATION IS SHOWING
+  int runesCollected; // HOW MANY RUNES HAVE YOU COLLECTED?
+
+  static final float JUMP_POWER = 11.0; // JUMP POWER
+  static final float RUN_SPEED = 5.0;
+  static final float AIR_RUN_SPEED = 2.0; // CONTROL SPEED WHILE IN THE AIR
+  static final float SLOWDOWN_PERC = 0.6; // PERC = PERCENTAGE
+  static final float AIR_SLOWDOWN_PERC = 0.85; // RESISTANCE WHILST IN AIR BECAUSE WOLF KEPT FLYING OFF AT RIDICULOUS SPEEDS
+  static final int RUN_ANIMATION_DELAY = 3; 
+  static final float TRIVIAL_SPEED = 1.0; // IF YOU ARE AT THIS SPEED YOU ARE IDLE
+
+  // THIS IS MY PLAYER CONSTRUCTOR FOR THE WOLF
+  Player() {
+    isOnGround = false;
+    facingRight = true;
+    position = new PVector();
+    velocity = new PVector();
+    reset();
+  }
+
+  void reset() {
+    runesCollected = 0; // STARTS AT 0 OBVIOUSLY
+    animDelay = 0;
+    animFrame = 0;
+    velocity.x = 0;
+    velocity.y = 0;
+  }
+
+  void inputCheck() {  
+    float speedHere = (isOnGround ? RUN_SPEED : AIR_RUN_SPEED);
+    float frictionHere = (isOnGround ? SLOWDOWN_PERC : AIR_SLOWDOWN_PERC);
+
+    if (theKeyboard.holdingLeft) {
+      velocity.x -= speedHere;
+    } else if (theKeyboard.holdingRight) {
+      velocity.x += speedHere;
+    } 
+    velocity.x *= frictionHere; // CONSTANTLY LOSE SPEED
+
+    if (isOnGround) { // JUMPING ONLY POSSIBLE IF ON GROUND
+      if (theKeyboard.holdingSpace || theKeyboard.holdingUp) { // BUTTON TO JUMP
+        sndJump.trigger(); // GROWL WHEN HE JUMPS - I FOUND IT HARD TO TURN THIS UP
+        velocity.y = -JUMP_POWER; // VERTICAL SPEED ADJUSTED AS YOU JUMP
+        isOnGround = false; // LET'S THE GAME KNOW THAT PLAYER HAS JUMPED AND CANNOT DO SO AGAIN UNTIL BACK ON GROUND
+      }
+    }
+  }
+
+  void checkForWallBumping() {
+    int guyWidth = wolf_idle2.width;
+    int guyHeight = wolf_idle2.height;
+    int wallProbeDistance = int(guyWidth*0.3);
+    int ceilingProbeDistance = int(guyHeight*0.95);
+
+
+    // PROBES FOR CHECKING RUNNING INTO WALLS ETC
+    PVector leftSideHigh, rightSideHigh, leftSideLow, rightSideLow, topSide;
+    leftSideHigh = new PVector();
+    rightSideHigh = new PVector();
+    leftSideLow = new PVector();
+    rightSideLow = new PVector();
+    topSide = new PVector();
+
+    // UPDATING WALL PROBES - RIGHT LEFT CENTER TOP ETC
+    leftSideHigh.x = leftSideLow.x = position.x - wallProbeDistance; 
+    rightSideHigh.x = rightSideLow.x = position.x + wallProbeDistance; 
+    leftSideLow.y = rightSideLow.y = position.y-0.2*guyHeight; 
+    leftSideHigh.y = rightSideHigh.y = position.y-0.8*guyHeight; 
+    topSide.x = position.x; 
+    topSide.y = position.y-ceilingProbeDistance; 
+
+    // THIS IS WHERE I RESET THE GAME IF WOLF HITS A RED BLOCK
+    if ( theWorld.worldSquareAt(topSide)==World.TILE_KILLBLOCK ||
+      theWorld.worldSquareAt(leftSideHigh)==World.TILE_KILLBLOCK ||
+      theWorld.worldSquareAt(leftSideLow)==World.TILE_KILLBLOCK ||
+      theWorld.worldSquareAt(rightSideHigh)==World.TILE_KILLBLOCK ||
+      theWorld.worldSquareAt(rightSideLow)==World.TILE_KILLBLOCK ||
+      theWorld.worldSquareAt(position)==World.TILE_KILLBLOCK) {
+      resetGame();
+      return; // ANY OTHER COLLISIONS DON'T MATTER
+    }
+
+    // PUSHES MY WOLF SLIGHTLY BACKWARD DEPENDING ON WHERE HE COLLIDED WITH SOMETHING
+    if ( theWorld.worldSquareAt(topSide)==World.TILE_SOLID) {
+      if (theWorld.worldSquareAt(position)==World.TILE_SOLID) {
+        position.sub(velocity);
+        velocity.x=0.0;
+        velocity.y=0.0;
+      } else {
+        position.y = theWorld.bottomOfSquare(topSide)+ceilingProbeDistance;
+        if (velocity.y < 0) {
+          velocity.y = 0.0;
+        }
+      }
+    }
+
+    if ( theWorld.worldSquareAt(leftSideLow)==World.TILE_SOLID) {
+      position.x = theWorld.rightOfSquare(leftSideLow)+wallProbeDistance;
+      if (velocity.x < 0) {
+        velocity.x = 0.0;
+      }
+    }
+
+    if ( theWorld.worldSquareAt(leftSideHigh)==World.TILE_SOLID) {
+      position.x = theWorld.rightOfSquare(leftSideHigh)+wallProbeDistance;
+      if (velocity.x < 0) {
+        velocity.x = 0.0;
+      }
+    }
+
+    if ( theWorld.worldSquareAt(rightSideLow)==World.TILE_SOLID) {
+      position.x = theWorld.leftOfSquare(rightSideLow)-wallProbeDistance;
+      if (velocity.x > 0) {
+        velocity.x = 0.0;
+      }
+    }
+
+    if ( theWorld.worldSquareAt(rightSideHigh)==World.TILE_SOLID) {
+      position.x = theWorld.leftOfSquare(rightSideHigh)-wallProbeDistance;
+      if (velocity.x > 0) {
+        velocity.x = 0.0;
+      }
+    }
+  }
+
+  void checkForRuneGetting() {
+    PVector centerOfPlayer;
+    // USED TO CHECK IF WOLF HAS OVERLAPPED WITH RUNE USING CENTER OF WOLF'S FEET
+    centerOfPlayer = new PVector(position.x, position.y-wolf_idle2.height/2);
+
+    if (theWorld.worldSquareAt(centerOfPlayer)==World.TILE_RUNE) {
+      theWorld.setSquareAtToThis(centerOfPlayer, World.TILE_EMPTY);
+      sndRune.trigger();
+      runesCollected++;
+    }
+  }
+
+  void checkForFalling() {
+    // EMPTY GRID POSITION OR RUNE TILE MEANS WE FALL AS WE ARE NOT STANDING ON ANYTHING
+    if (theWorld.worldSquareAt(position)==World.TILE_EMPTY ||
+      theWorld.worldSquareAt(position)==World.TILE_RUNE) {
+      isOnGround=false;
+    }
+
+    if (isOnGround==false) { // IF WE'RE NOT ON THE GROUND    
+      if (theWorld.worldSquareAt(position)==World.TILE_SOLID) { // OR IF WE ARE ON A SOLID SQUARE (WHITE BLOCKS)
+        isOnGround = true;
+        position.y = theWorld.topOfSquare(position);
+        velocity.y = 0.0;
+      } else {
+        velocity.y += GRAVITY_POWER;
+      }
+    }
+  }
+
+  // PUT ALL OF THESE 3 TOGETHER
+  void move() {
+    position.add(velocity);
+
+    checkForWallBumping();
+
+    checkForRuneGetting();
+
+    checkForFalling();
+  }
+
+  // DRAWING THE WOLF
+  void draw() {
+    int guyWidth = wolf_idle2.width;
+    int guyHeight = wolf_idle2.height;
+
+    if (velocity.x<-TRIVIAL_SPEED) {
+      facingRight = false;
+    } else if (velocity.x>TRIVIAL_SPEED) {
+      facingRight = true;
+    }
+
+    pushMatrix();
+    translate(position.x, position.y);
+    if (facingRight==false) {
+      scale(-1, 1);
+    }
+    translate(-guyWidth/2, -guyHeight); 
+
+    if (isOnGround==false) { // FALL OR JUMP IMAGE
+      image(wolf_run11, 0, 0);
+    } else if (abs(velocity.x)<TRIVIAL_SPEED) { // IDLE IMAGE
+      image(wolf_idle2, 0, 0);
+    } else { // RUNNING ANIMATIONS
+      if (animDelay--<0) {
+        animDelay=RUN_ANIMATION_DELAY;
+        if (animFrame==0) {
+          animFrame=1;
+        } else {
+          animFrame=0;
+        }
+      }
+
+      if (animFrame==0) {
+        image(wolf_run11, 0, 0);
+      } else {
+        image(wolf_run22, 0, 0);
+      }
+    }
+    popMatrix();
+  }
+}
